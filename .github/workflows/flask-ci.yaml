@@ -58,12 +58,17 @@ jobs:
       - name: Run bandit
         run:  python -m bandit -r app.py tests/ --severity-level high
   docker-build:
-    needs: [security, lint, tests]
-    runs-on: ubuntu-latest
-    steps:
-     - name: download code flask
-       uses: actions/checkout@v7 
-     - name: image docker
-       run:  docker build -t flask-app:test .
+      needs: [security, lint, tests]
+      runs-on: ubuntu-latest
+      steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: image docker
+        run: docker build -t flask-app:test .
+      - name: verify image
+        run: docker image ls
+      - name: image-inspect
+        run: docker image inspect flask-app:test
+
 
                         
