@@ -6,4 +6,8 @@ jobs:
     steps:
      - name: print message
        run: echo "the one acton test"
- 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+     - name: print message
+       run: echo "the two  acton test"  
