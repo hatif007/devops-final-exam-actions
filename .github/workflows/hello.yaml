@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
      - name: print message
-       run: echo "the one acton test"
+       run: exit 1
   build:
     needs: hello
     runs-on: ubuntu-latest
