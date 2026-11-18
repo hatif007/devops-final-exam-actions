@@ -69,6 +69,13 @@ jobs:
         run: docker image ls
       - name: image-inspect
         run: docker image inspect flask-app:test
+      - name: Save Docker
+        run:  docker save -o flask-app.tar flask-app:test
+      - name:  Docker upload
+        uses: actions/upload-artifact@v7
+        with:
+            name: my-artifact
+            path: flask-app.tar   
 
 
                         
