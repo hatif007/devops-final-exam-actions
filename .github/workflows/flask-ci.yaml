@@ -43,3 +43,17 @@ jobs:
         run:  pip install -r requirements.txt 
       - name: Test Flake8
         run:  python -m flake8 app.py tests/  --ignore=E302,E305,E303,E271,W292,W293
+  security:
+    needs: install  
+    runs-on: ubuntu-latest
+    steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: install bandit
+        run:  pip install -r requirements.txt
+      - name: Run bandit
+        run:  python -m bandit -r app.py tests/          
