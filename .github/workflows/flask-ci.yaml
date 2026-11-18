@@ -3,6 +3,9 @@ on:
   pull_request:
     branches:
       - dev 
+env:
+  IMAGE_NAME:  hatif007/devops-final-exam
+  IMAGE_TAG:  github-${{ github.run_number }}       
 jobs:
   install:
     runs-on: ubuntu-latest
@@ -64,13 +67,13 @@ jobs:
       - name: download code flask
         uses: actions/checkout@v7
       - name: image docker
-        run: docker build -t flask-app:test .
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
       - name: verify image
         run: docker image ls
       - name: image-inspect
-        run: docker image inspect flask-app:test
+        run: docker image inspect $IMAGE_NAME:$IMAGE_TAG
       - name: Save Docker
-        run:  docker save -o flask-app.tar flask-app:test
+        run:  docker save -o flask-app.tar $IMAGE_NAME:$IMAGE_TAG
       - name:  Docker upload
         uses: actions/upload-artifact@v7
         with:
@@ -90,12 +93,16 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: flask-app:test
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true
           vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'  
+          severity: 'CRITICAL,HIGH' 
+      - name: Show-GitHub-Run-Number
+        run: 'echo "Build Number: github-${{ github.run_number }}"'
+
 
          
 
