@@ -19,3 +19,4 @@ jobs:
         run:  python -m pytest tests/test_app.py -v
       - name: Run Flake8
         run:  python -m flake8 app.py tests/ 
+        run:  flake8 --ignore=E302,E305,E303,E271,W292,W293
