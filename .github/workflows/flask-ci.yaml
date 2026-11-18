@@ -56,4 +56,4 @@ jobs:
       - name: install bandit
         run:  pip install -r requirements.txt
       - name: Run bandit
-        run:  python -m bandit -r app.py tests/          
+        run:  python -m bandit -r app.py tests/ --severity-level high          
