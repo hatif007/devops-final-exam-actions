@@ -10,5 +10,5 @@ jobs:
   runner-test:
     runs-on: minikube-qa
     steps:
-      - name: Print a message
-        run: echo "Hello from Windows Runner?"
+      - name: test kubectl 
+        run: kubectl get nodes
