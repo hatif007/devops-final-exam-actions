@@ -11,4 +11,4 @@ jobs:
     runs-on: minikube-qa
     steps:
       - name: test kubectl 
-        run: kubectl get nodes
+        run: kubectl --kubeconfig "C:\Users\yoav\.kube\config" get nodes
