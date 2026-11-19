@@ -1,0 +1,147 @@
+name: flask-app
+on:
+  pull_request:
+    branches:
+      - dev
+  push:
+    branches:
+      - dev
+env:
+  IMAGE_NAME:  hatif007/devops-final-exam
+  IMAGE_TAG:  github-${{ github.run_number }}       
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14" 
+      - name: Install dependencies
+        run:  pip install -r requirements.txt 
+  tests:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"  
+      - name: Run install 
+        run:  pip install -r requirements.txt  
+      - name: Run pytest 
+        run:  python -m pytest tests/test_app.py -v  
+  lint:  
+    needs: install  
+    runs-on: ubuntu-latest
+    steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14" 
+      - name: Run Flake8
+        run:  pip install -r requirements.txt 
+      - name: Test Flake8
+        run:  python -m flake8 app.py tests/  --ignore=E302,E305,E303,E271,W292,W293
+      
+  security:
+    needs: install  
+    runs-on: ubuntu-latest
+    steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: setup python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: install bandit
+        run:  pip install -r requirements.txt
+      - name: Run bandit
+        run:  python -m bandit -r app.py tests/ --severity-level high
+  docker-build:
+      needs: [security, lint, tests]
+      runs-on: ubuntu-latest
+      steps:
+      - name: download code flask
+        uses: actions/checkout@v7
+      - name: image docker
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
+      - name: verify image
+        run: docker image ls
+      - name: image-inspect
+        run: docker image inspect $IMAGE_NAME:$IMAGE_TAG
+      - name: Save Docker
+        run:  docker save -o flask-app.tar $IMAGE_NAME:$IMAGE_TAG
+      - name:  Docker upload
+        uses: actions/upload-artifact@v7
+        with:
+            name: my-artifact
+            path: flask-app.tar
+  trivy-scan:
+     needs: docker-build
+     runs-on: ubuntu-latest
+     steps:
+      - name: Install yq
+        run: |
+          YQ_VERSION=v4.52.4
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version  
+      - name: download code flask
+        uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: my-artifact
+      - name: Load Docker Image
+        run:  docker load -i flask-app.tar
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH' 
+      - name: login to docker hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        uses: docker/login-action@v4
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}  
+      - name: push Docker Image 
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        run:  docker push $IMAGE_NAME:$IMAGE_TAG   
+      - name: download GitOps
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        uses: actions/checkout@v5
+        with:
+          repository: hatif007/devops-final-exam-gitops
+          path: gitops-config
+          token: ${{ secrets.GITOPS_TOKEN }}
+      - name: update dev image tag nember
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        run:  yq -i '.pods.tag = strenv(IMAGE_TAG)' gitops-config/environments/dev/values.yaml 
+      - name: Commit and add
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        working-directory: gitops-config
+        run: |
+          git config user.name "hatif007"
+          git config user.email "yoav.barel1@gmail.com"
+          git add environments/dev/values.yaml
+          git commit -m "Update DEV image tag to $IMAGE_TAG"
+          git push origin main
+
+    
+      - name: Show-GitHub-Run-Number
+        run: 'echo "Build Number: github-${{ github.run_number }}"'
+
+
+ 
