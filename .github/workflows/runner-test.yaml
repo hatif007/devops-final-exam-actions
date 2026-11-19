@@ -1,0 +1,10 @@
+name: Self Hosted Runner
+on:
+  workflow_dispatch
+jobs:
+  runner-test: 
+    runs-on:  minikube-qa
+    steps:  
+      - name: print a mmeage 
+        run: echo "Hello from Windows Runner?"
+
