@@ -1,0 +1,14 @@
+name: qa tests
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  minikube-qa:
+    runs-on: minikube-qa
+    steps:
+     - name: tets
+       run: echo "welcome qa" 
+     
