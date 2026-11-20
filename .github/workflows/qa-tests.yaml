@@ -48,3 +48,10 @@ jobs:
        with:
          name: "qa-report.json"   
          json: '{"environment":"QA", "Lint outcome is":"${{ steps.helm_lint.outcome }}", "helm template is":"${{ steps.helm_template.outcome }}", "helm pipe is":"${{ steps.helm_pipe.outcome }}"}'
+     - name: json upload
+       if: ${{ !cancelled() }}
+       uses: actions/upload-artifact@v7
+       with:
+         name: qa-test-report
+         path: qa-report.json
+         if-no-files-found: error   
