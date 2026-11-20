@@ -61,5 +61,9 @@ jobs:
          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
          sudo chmod +x /usr/local/bin/yq
          yq --version     
-     - name: read the tag name
-       run: yq '.pods.tag' qa/environments/dev/values.yaml
+     
+     - name: read and save 
+       id: save_file
+       run: echo "image_tag=$(yq '.pods.tag' qa/environments/dev/values.yaml)" >> "$GITHUB_OUTPUT"
+     - name: what is the tag
+       run: echo "${{ steps.save_file.outputs.image_tag }}"
