@@ -23,3 +23,5 @@ jobs:
        run: helm version     
      - name: Run Helm Lint
        run: helm lint qa/charts/devops-final-exam -f qa/environments/qa/values.yaml --strict
+     - name: Run Helm Template
+       run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml  
