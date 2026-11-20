@@ -22,8 +22,10 @@ jobs:
      - name: Verify the installation
        run: helm version     
      - name: Run Helm Lint
+       id: helm_lint
        run: helm lint qa/charts/devops-final-exam -f qa/environments/qa/values.yaml --strict
      - name: Run Helm Template
+       id: helm_template
        run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml
      - name: Set up Kubeconform
        id: setup-kubeconform
@@ -31,4 +33,11 @@ jobs:
        with:
         kubeconform-version: '0.6.1'
      - name: helm pipe
+       id: helm_pipe
        run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml | kubeconform -strict -summary        
+     - name: collect results
+       if: ${{ !cancelled() }}
+       run: |
+         echo "Lint outcome is ${{ steps.helm_lint.outcome }}"
+         echo "helm template is ${{ steps.helm_template.outcome }}"
+         echo "helm pipe is ${{ steps.helm_pipe.outcome }}"
