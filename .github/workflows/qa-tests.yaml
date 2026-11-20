@@ -6,9 +6,20 @@ on:
       - dev
 
 jobs:
-  minikube-qa:
-    runs-on: minikube-qa
+  helm-qa:
+    runs-on: ubuntu-latest
     steps:
-     - name: tets
-       run: echo "welcome qa" 
-     
+     - name: Checkout tools repo
+       uses: actions/checkout@v7
+       with:
+        repository: hatif007/devops-final-exam-gitops
+        path: qa
+        ref: main
+     - uses: azure/setup-helm@v5
+       with:
+        version: '4.3.1'  
+       id: install
+     - name: Verify the installation
+       run: helm version     
+     - name: Run Helm Lint
+       run: helm lint qa/charts/devops-final-exam -f qa/environments/qa/values.yaml --strict
