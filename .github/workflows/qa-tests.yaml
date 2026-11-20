@@ -41,3 +41,10 @@ jobs:
          echo "Lint outcome is ${{ steps.helm_lint.outcome }}"
          echo "helm template is ${{ steps.helm_template.outcome }}"
          echo "helm pipe is ${{ steps.helm_pipe.outcome }}"
+     - name: create-json
+       id: create_json
+       if: ${{ !cancelled() }}
+       uses: jsdaniell/create-json@v1.2.4
+       with:
+         name: "qa-report.json"   
+         json: '{"environment":"QA", "Lint outcome is":"${{ steps.helm_lint.outcome }}", "helm template is":"${{ steps.helm_template.outcome }}", "helm pipe is":"${{ steps.helm_pipe.outcome }}"}'
