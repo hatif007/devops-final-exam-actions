@@ -55,3 +55,11 @@ jobs:
          name: qa-test-report
          path: qa-report.json
          if-no-files-found: error   
+     - name: Install yq
+       run: |
+         YQ_VERSION=v4.52.4
+         sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+         sudo chmod +x /usr/local/bin/yq
+         yq --version     
+     - name: read the tag name
+       run: yq '.pods.tag' qa/environments/dev/values.yaml
