@@ -1,4 +1,4 @@
-name: qa tests
+name: promotion
 on:
   workflow_dispatch:
   push:
