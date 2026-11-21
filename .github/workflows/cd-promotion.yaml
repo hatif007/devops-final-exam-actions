@@ -60,7 +60,10 @@ jobs:
           YQ_VERSION=v4.52.4
           sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
-          yq --version     
+          yq --version
+      - name: read current QA version
+        run: yq '.pods.tag' qa/environments/qa/values.yaml
+       
       
 
      
