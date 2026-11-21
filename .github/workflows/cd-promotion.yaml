@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+   
 jobs:
   promotion:
     runs-on: ubuntu-latest
@@ -40,3 +41,16 @@ jobs:
          else
           echo "Promotion required"
          fi
+    outputs:  
+      dev_tag: ${{ steps.save_file.outputs.image_tag }}   
+  promote_qa:
+    needs: promotion
+    runs-on: ubuntu-latest
+    steps:
+      - name: see the  version
+        run: echo "Deploying ${{ needs.promotion.outputs.dev_tag }}"    
+
+     
+
+
+           
