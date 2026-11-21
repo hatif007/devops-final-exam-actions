@@ -49,6 +49,19 @@ jobs:
     steps:
       - name: see the  version
         run: echo "Deploying ${{ needs.promotion.outputs.dev_tag }}"    
+      - name: checkout_gitOps
+        uses: actions/checkout@v7
+        with:
+          repository: hatif007/devops-final-exam-gitops
+          path: qa
+          ref: main  
+      - name: install_yq
+        run: |
+          YQ_VERSION=v4.52.4
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version     
+      
 
      
 
