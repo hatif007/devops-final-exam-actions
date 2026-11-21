@@ -71,4 +71,4 @@ jobs:
        id: read_qa
        run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
      - name: what is the tag
-       run: echo "${{ steps.save_file.outputs.image_tag }}"
+       run: echo "${{ steps.save_file.outputs.read_qa }}"
