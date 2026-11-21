@@ -68,7 +68,12 @@ jobs:
       - name: chance the qa file 
         env:
           DEV_TAG: ${{ needs.promotion.outputs.dev_tag }}
-        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/01.yaml    
+        id: tag_new  
+        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/01.yaml
+      - name: show the tag name
+        run: | 
+          echo "the version is:"
+          yq '.pods.tag' qa/environments/qa/01.yaml    
        
       
 
