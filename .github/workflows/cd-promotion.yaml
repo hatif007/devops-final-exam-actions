@@ -63,6 +63,12 @@ jobs:
           yq --version
       - name: read current QA version
         run: yq '.pods.tag' qa/environments/qa/values.yaml
+      - name: copy file
+        run: cp qa/environments/qa/values.yaml qa/environments/qa/01.yaml
+      - name: chance the qa file 
+        env:
+          DEV_TAG: ${{ needs.promotion.outputs.dev_tag }}
+        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/01.yaml    
        
       
 
