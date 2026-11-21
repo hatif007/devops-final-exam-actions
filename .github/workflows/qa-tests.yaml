@@ -73,10 +73,11 @@ jobs:
      - name: what is the tag
        run: echo "${{ steps.read_qa.outputs.image_tag }}"
      - name: gate_environments
-       run: DEV="github-38"
-            QA="22"
-            if [ $DEV == $QA  ]; then
-            echo "`Already up to date`  "
-            else
-            echo "`Promotion required`  "
-            fi 
+       run: |
+         DEV="github-38"
+         QA="22"
+         if [ "$DEV" = "$QA" ]; then
+          echo "Already up to date"
+         else
+          echo "Promotion required"
+         fi
