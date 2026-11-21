@@ -72,3 +72,11 @@ jobs:
        run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
      - name: what is the tag
        run: echo "${{ steps.read_qa.outputs.image_tag }}"
+     - name: gate_environments
+       run: DEV="github-38"
+            QA="22"
+            if [ $DEV == $QA  ]; then
+            echo "`Already up to date`  "
+            else
+            echo "`Promotion required`  "
+            fi 
