@@ -1,12 +1,15 @@
 name: promotion
 on:
-  workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: [flask-app]
+    types:
+      - completed
     branches:
-      - dev
+      - dev      
    
 jobs:
   promotion:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout_gitOps
