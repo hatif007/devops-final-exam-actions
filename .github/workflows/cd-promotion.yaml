@@ -15,6 +15,7 @@ jobs:
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
+          token: ${{ secrets.GITOPS_TOKEN }}  
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main
@@ -55,6 +56,7 @@ jobs:
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
+          token: ${{ secrets.GITOPS_TOKEN }}  
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main  
@@ -66,17 +68,26 @@ jobs:
           yq --version
       - name: read current QA version
         run: yq '.pods.tag' qa/environments/qa/values.yaml
-      - name: copy file
-        run: cp qa/environments/qa/values.yaml qa/environments/qa/01.yaml
+      
       - name: chance the qa file 
         env:
           DEV_TAG: ${{ needs.promotion.outputs.dev_tag }}
         id: tag_new  
-        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/01.yaml
+        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/values.yaml
       - name: show the tag name
         run: | 
           echo "the version is:"
-          yq '.pods.tag' qa/environments/qa/01.yaml    
+          yq '.pods.tag' qa/environments/qa/values.yaml
+      - name: Commit and add
+        env:
+          QA_TAG: ${{ needs.promotion.outputs.dev_tag }}
+        working-directory: qa
+        run: |
+          git config user.name "hatif007"
+          git config user.email "yoav.barel1@gmail.com"
+          git add environments/qa/values.yaml
+          git commit -m "Update QA image tag to $QA_TAG"
+          git push origin main       
        
       
 
