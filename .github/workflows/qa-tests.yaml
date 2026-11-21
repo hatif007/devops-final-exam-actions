@@ -74,8 +74,8 @@ jobs:
        run: echo "${{ steps.read_qa.outputs.image_tag }}"
      - name: gate_environments
        run: |
-         DEV="github-38"
-         QA="22"
+         DEV="${{ steps.save_file.outputs.image_tag }}"
+         QA="${{ steps.read_qa.outputs.image_tag }}"
          if [ "$DEV" = "$QA" ]; then
           echo "Already up to date"
          else
