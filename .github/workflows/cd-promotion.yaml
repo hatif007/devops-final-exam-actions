@@ -1,0 +1,42 @@
+name: qa tests
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+jobs:
+  promotion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout_gitOps
+        uses: actions/checkout@v7
+        with:
+          repository: hatif007/devops-final-exam-gitops
+          path: qa
+          ref: main
+      - name: Install yq
+        run: |
+         YQ_VERSION=v4.52.4
+         sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+         sudo chmod +x /usr/local/bin/yq
+         yq --version     
+     
+      - name: read and save 
+        id: save_file
+        run: echo "image_tag=$(yq '.pods.tag' qa/environments/dev/values.yaml)" >> "$GITHUB_OUTPUT"
+      - name: what is the tag
+        run: echo "${{ steps.save_file.outputs.image_tag }}"
+      - name: read_and_save_tag_qa
+        id: read_qa
+        run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
+      - name: what is the tag
+        run: echo "${{ steps.read_qa.outputs.image_tag }}"
+      - name: gate_environments
+        run: |
+         DEV="${{ steps.save_file.outputs.image_tag }}"
+         QA="${{ steps.read_qa.outputs.image_tag }}"
+         if [ "$DEV" = "$QA" ]; then
+          echo "Already up to date"
+         else
+          echo "Promotion required"
+         fi
