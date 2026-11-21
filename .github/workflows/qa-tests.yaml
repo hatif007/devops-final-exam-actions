@@ -64,11 +64,11 @@ jobs:
      
      - name: read and save 
        id: save_file
-       run: echo " dev_image_tag=$(yq '.pods.tag' qa/environments/dev/values.yaml)" >> "$GITHUB_OUTPUT"
+       run: echo "image_tag=$(yq '.pods.tag' qa/environments/dev/values.yaml)" >> "$GITHUB_OUTPUT"
      - name: what is the tag
-       run: echo "${{ steps.save_file.outputs.dev_image_tag }}"
+       run: echo "${{ steps.save_file.outputs.image_tag }}"
      - name: read_and_save_tag_qa
        id: read_qa
-       run: echo "qa_image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
+       run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
      - name: what is the tag
-       run: echo "${{ steps.save_file.outputs.qa_image_tag }}"
+       run: echo "${{ steps.save_file.outputs.image_tag }}"
