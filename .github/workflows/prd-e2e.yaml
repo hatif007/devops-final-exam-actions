@@ -1,0 +1,17 @@
+name: prd-e2e
+on:
+  workflow_dispatch:
+jobs:  
+  e2e-tests:
+    runs-on: [self-hosted, minikube-qa]   
+    steps:
+      - name:  Check Minikube 
+        run:   minikube status
+      - name:  Check PRD Deployment
+        run: kubectl rollout status deployment/prd-flask-app -n prd
+      - name: Check PRD HTTP
+        shell:  powershell
+        run: |
+           $URL = minikube service prd-flask-app-service -n prd --url
+           curl.exe -f -s -o NUL $URL
+           if ($LASTEXITCODE -ne 0) { exit 1 }
