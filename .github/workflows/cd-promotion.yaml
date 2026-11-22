@@ -48,7 +48,7 @@ jobs:
     outputs:  
       dev_tag: ${{ steps.save_file.outputs.image_tag }}   
   promote_qa:
-    needs: promotion
+    needs:  promotion
     runs-on: ubuntu-latest
     steps:
       - name: see the  version
@@ -88,10 +88,48 @@ jobs:
           git add environments/qa/values.yaml
           git commit -m "Update QA image tag to $QA_TAG"
           git push origin main       
-       
-      
-
-     
-
-
-           
+  promote_prd:
+    needs:  promote_qa 
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout_gitOps
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITOPS_TOKEN }}  
+          repository: hatif007/devops-final-exam-gitops
+          path: qa
+          ref: main
+      - name: Install yq
+        run: |
+         YQ_VERSION=v4.52.4
+         sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+         sudo chmod +x /usr/local/bin/yq
+         yq --version   
+      - name: read_and_save_tag_qa
+        id: read_qa
+        run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
+      - name: what is the tag
+        run: echo "${{ steps.read_qa.outputs.image_tag }}"
+      - name: read current PRD version
+        run: yq '.pods.tag' qa/environments/prd/values.yaml
+      - name: chance the prd file 
+        env:
+          PRD_TAG: ${{ steps.read_qa.outputs.image_tag }}
+        id: tag_new  
+        run:  yq -i '.pods.tag = strenv(PRD_TAG)' qa/environments/prd/values.yaml
+      - name: show the tag name
+        run: | 
+          echo "the version is:"
+          yq '.pods.tag' qa/environments/prd/values.yaml  
+      - name: Commit and add
+        env:
+          PRD_TAG: ${{ steps.read_qa.outputs.image_tag }}
+        working-directory: qa
+        run: |
+          git config user.name "hatif007"
+          git config user.email "yoav.barel1@gmail.com"
+          git add environments/prd/values.yaml
+          git commit -m "Update PRD image tag to $PRD_TAG"
+          git push origin main     
+  
+               
