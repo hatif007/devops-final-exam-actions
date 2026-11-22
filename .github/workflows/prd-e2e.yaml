@@ -6,7 +6,7 @@ jobs:
     runs-on: [self-hosted, minikube-qa]   
     steps:
       - name:  Check Minikube 
-        run:   minikube status
+        run:   '& "C:\minikube\minikube.exe" status'
       - name:  Check PRD Deployment
         run: kubectl rollout status deployment/prd-flask-app -n prd
       - name: Check PRD HTTP
