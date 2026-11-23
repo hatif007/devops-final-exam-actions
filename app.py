@@ -13,6 +13,6 @@ def online_status():
         "status": "online",
         "application": "alive"
     }), 200
-
+# סתם בדיקה
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8082)
