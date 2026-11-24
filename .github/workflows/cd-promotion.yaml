@@ -131,5 +131,24 @@ jobs:
           git add environments/prd/values.yaml
           git commit -m "Update PRD image tag to $PRD_TAG"
           git push origin main     
+
+  slackNotification:
+    needs: [promotion, promote_qa, promote_prd]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: devops-final-exam-alerts
+          SLACK_USERNAME: Yoav
+          SLACK_TITLE: DevOps Final Exam - Promotion
+          SLACK_COLOR: ${{ needs.promote_prd.result == 'success' && 'good' || 'danger' }}
+          SLACK_MESSAGE: |
+            Promotion: ${{ needs.promotion.result }}
+            QA: ${{ needs.promote_qa.result }}
+            PRD: ${{ needs.promote_prd.result }}
+            Docker Image Tag: ${{ needs.promote_prd.outputs.prd_tag }}
+          
   
-               
