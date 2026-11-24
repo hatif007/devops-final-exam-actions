@@ -15,10 +15,7 @@ jobs:
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
-<<<<<<< HEAD
-=======
           token: ${{ secrets.GITOPS_TOKEN }}  
->>>>>>> origin/main
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main
@@ -51,11 +48,7 @@ jobs:
     outputs:  
       dev_tag: ${{ steps.save_file.outputs.image_tag }}   
   promote_qa:
-<<<<<<< HEAD
-    needs: promotion
-=======
     needs:  promotion
->>>>>>> origin/main
     runs-on: ubuntu-latest
     steps:
       - name: see the  version
@@ -63,10 +56,7 @@ jobs:
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
-<<<<<<< HEAD
-=======
           token: ${{ secrets.GITOPS_TOKEN }}  
->>>>>>> origin/main
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main  
@@ -78,30 +68,11 @@ jobs:
           yq --version
       - name: read current QA version
         run: yq '.pods.tag' qa/environments/qa/values.yaml
-<<<<<<< HEAD
-      - name: copy file
-        run: cp qa/environments/qa/values.yaml qa/environments/qa/01.yaml
-=======
       
->>>>>>> origin/main
       - name: chance the qa file 
         env:
           DEV_TAG: ${{ needs.promotion.outputs.dev_tag }}
         id: tag_new  
-<<<<<<< HEAD
-        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/01.yaml
-      - name: show the tag name
-        run: | 
-          echo "the version is:"
-          yq '.pods.tag' qa/environments/qa/01.yaml    
-       
-      
-
-     
-
-
-           
-=======
         run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/values.yaml
       - name: show the tag name
         run: | 
@@ -118,8 +89,10 @@ jobs:
           git commit -m "Update QA image tag to $QA_TAG"
           git push origin main       
   promote_prd:
-    needs:  promote_qa 
+    needs:  promote_qa
     runs-on: ubuntu-latest
+    outputs:
+      PRD_TAG: ${{ steps.read_qa.outputs.image_tag }} 
     steps:
       - name: checkout_gitOps
         uses: actions/checkout@v7
@@ -153,6 +126,7 @@ jobs:
       - name: Commit and add
         env:
           PRD_TAG: ${{ steps.read_qa.outputs.image_tag }}
+          
         working-directory: qa
         run: |
           git config user.name "hatif007"
@@ -180,5 +154,3 @@ jobs:
             PRD: ${{ needs.promote_prd.result }}
             Docker Image Tag: ${{ needs.promote_prd.outputs.prd_tag }}
           
-  
->>>>>>> origin/main
