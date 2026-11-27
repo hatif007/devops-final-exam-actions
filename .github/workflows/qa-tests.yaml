@@ -2,14 +2,18 @@ name: Reusable qa tests
 
 on:
   workflow_call:
-    
- 
+    outputs:
+      tested_tag:
+        description: "The QA image tag that was tested"
+        value: ${{ jobs.helm-qa.outputs.tested_tag }}
 
 jobs:
   helm-qa:
     runs-on: ubuntu-latest
-    
-      
+
+    outputs:
+      tested_tag: ${{ steps.read_qa.outputs.image_tag }}
+
     steps:
       - name: Checkout tools repo
         uses: actions/checkout@v4
@@ -17,6 +21,17 @@ jobs:
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main
+
+      - name: Install yq
+        run: |
+          YQ_VERSION=v4.52.4
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Read tested QA tag
+        id: read_qa
+        run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Helm
         id: install
@@ -43,11 +58,13 @@ jobs:
 
       - name: Helm pipe to Kubeconform
         id: helm_pipe
+        shell: bash
         run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml | kubeconform -strict -summary
 
       - name: Collect results
         if: ${{ !cancelled() }}
         run: |
+          echo "Tested image tag is ${{ steps.read_qa.outputs.image_tag }}"
           echo "Lint outcome is ${{ steps.helm_lint.outcome }}"
           echo "helm template is ${{ steps.helm_template.outcome }}"
           echo "helm pipe is ${{ steps.helm_pipe.outcome }}"
@@ -58,12 +75,19 @@ jobs:
         uses: jsdaniell/create-json@v1.2.4
         with:
           name: "qa-report.json"
-          json: '{"environment":"QA", "Lint outcome is":"${{ steps.helm_lint.outcome }}", "helm template is":"${{ steps.helm_template.outcome }}", "helm pipe is":"${{ steps.helm_pipe.outcome }}"}'
+          json: |
+            {
+              "environment": "QA",
+              "tested_tag": "${{ steps.read_qa.outputs.image_tag }}",
+              "Lint outcome is": "${{ steps.helm_lint.outcome }}",
+              "helm template is": "${{ steps.helm_template.outcome }}",
+              "helm pipe is": "${{ steps.helm_pipe.outcome }}"
+            }
 
       - name: json upload
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-         name: qa-test-report
-         path: qa-report.json
-         if-no-files-found: error   
+          name: qa-test-report
+          path: qa-report.json
+          if-no-files-found: error
