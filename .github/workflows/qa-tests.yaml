@@ -1,83 +1,69 @@
-name: qa tests
+name: Reusable qa tests
+
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - dev
+  workflow_call:
+    
+ 
 
 jobs:
   helm-qa:
     runs-on: ubuntu-latest
+    
+      
     steps:
-     - name: Checkout tools repo
-       uses: actions/checkout@v7
-       with:
-        repository: hatif007/devops-final-exam-gitops
-        path: qa
-        ref: main
-     - uses: azure/setup-helm@v5
-       with:
-        version: '4.3.1'  
-       id: install
-     - name: Verify the installation
-       run: helm version     
-     - name: Run Helm Lint
-       id: helm_lint
-       run: helm lint qa/charts/devops-final-exam -f qa/environments/qa/values.yaml --strict
-     - name: Run Helm Template
-       id: helm_template
-       run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml
-     - name: Set up Kubeconform
-       id: setup-kubeconform
-       uses: bmuschko/setup-kubeconform@v1
-       with:
-        kubeconform-version: '0.6.1'
-     - name: helm pipe
-       id: helm_pipe
-       run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml | kubeconform -strict -summary        
-     - name: collect results
-       if: ${{ !cancelled() }}
-       run: |
-         echo "Lint outcome is ${{ steps.helm_lint.outcome }}"
-         echo "helm template is ${{ steps.helm_template.outcome }}"
-         echo "helm pipe is ${{ steps.helm_pipe.outcome }}"
-     - name: create-json
-       id: create_json
-       if: ${{ !cancelled() }}
-       uses: jsdaniell/create-json@v1.2.4
-       with:
-         name: "qa-report.json"   
-         json: '{"environment":"QA", "Lint outcome is":"${{ steps.helm_lint.outcome }}", "helm template is":"${{ steps.helm_template.outcome }}", "helm pipe is":"${{ steps.helm_pipe.outcome }}"}'
-     - name: json upload
-       if: ${{ !cancelled() }}
-       uses: actions/upload-artifact@v7
-       with:
+      - name: Checkout tools repo
+        uses: actions/checkout@v4
+        with:
+          repository: hatif007/devops-final-exam-gitops
+          path: qa
+          ref: main
+
+      - name: Setup Helm
+        id: install
+        uses: azure/setup-helm@v4
+        with:
+          version: '4.3.1'
+
+      - name: Verify the installation
+        run: helm version
+
+      - name: Run Helm Lint
+        id: helm_lint
+        run: helm lint qa/charts/devops-final-exam -f qa/environments/qa/values.yaml --strict
+
+      - name: Run Helm Template
+        id: helm_template
+        run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml
+
+      - name: Set up Kubeconform
+        id: setup-kubeconform
+        uses: bmuschko/setup-kubeconform@v1
+        with:
+          kubeconform-version: '0.6.1'
+
+      - name: Helm pipe to Kubeconform
+        id: helm_pipe
+        run: helm template qa-test qa/charts/devops-final-exam --values qa/environments/qa/values.yaml | kubeconform -strict -summary
+
+      - name: Collect results
+        if: ${{ !cancelled() }}
+        run: |
+          echo "Lint outcome is ${{ steps.helm_lint.outcome }}"
+          echo "helm template is ${{ steps.helm_template.outcome }}"
+          echo "helm pipe is ${{ steps.helm_pipe.outcome }}"
+
+      - name: Create JSON report
+        id: create_json
+        if: ${{ !cancelled() }}
+        uses: jsdaniell/create-json@v1.2.4
+        with:
+          name: "qa-report.json"
+          json: '{"environment":"QA", "Lint outcome is":"${{ steps.helm_lint.outcome }}", "helm template is":"${{ steps.helm_template.outcome }}", "helm pipe is":"${{ steps.helm_pipe.outcome }}"}'
+
+      - name: json upload
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
          name: qa-test-report
          path: qa-report.json
          if-no-files-found: error   
-     - name: Install yq
-       run: |
-         YQ_VERSION=v4.52.4
-         sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
-         sudo chmod +x /usr/local/bin/yq
-         yq --version     
-     
-     - name: read and save 
-       id: save_file
-       run: echo "image_tag=$(yq '.pods.tag' qa/environments/dev/values.yaml)" >> "$GITHUB_OUTPUT"
-     - name: what is the tag
-       run: echo "${{ steps.save_file.outputs.image_tag }}"
-     - name: read_and_save_tag_qa
-       id: read_qa
-       run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
-     - name: what is the tag
-       run: echo "${{ steps.read_qa.outputs.image_tag }}"
-     - name: gate_environments
-       run: |
-         DEV="${{ steps.save_file.outputs.image_tag }}"
-         QA="${{ steps.read_qa.outputs.image_tag }}"
-         if [ "$DEV" = "$QA" ]; then
-          echo "Already up to date"
-         else
-          echo "Promotion required"
-         fi

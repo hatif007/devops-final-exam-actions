@@ -1,84 +1,90 @@
 name: promotion
+
 on:
   workflow_run:
     workflows: [flask-app]
     types:
       - completed
     branches:
-      - dev      
-   
+      - dev
+
 jobs:
   promotion:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
+    outputs:
+      dev_tag: ${{ steps.save_file.outputs.image_tag }}
+      promotion_required: ${{ steps.gate.outputs.required }}
+
     steps:
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.GITOPS_TOKEN }}  
+          token: ${{ secrets.GITOPS_TOKEN }}
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main
+
       - name: Install yq
         run: |
-         YQ_VERSION=v4.52.4
-         sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
-         sudo chmod +x /usr/local/bin/yq
-         yq --version     
-     
-      - name: read and save 
+          YQ_VERSION=v4.52.4
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: read and save
         id: save_file
         run: echo "image_tag=$(yq '.pods.tag' qa/environments/dev/values.yaml)" >> "$GITHUB_OUTPUT"
-      - name: what is the tag
-        run: echo "${{ steps.save_file.outputs.image_tag }}"
+
       - name: read_and_save_tag_qa
         id: read_qa
         run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
-      - name: what is the tag
-        run: echo "${{ steps.read_qa.outputs.image_tag }}"
+
       - name: gate_environments
+        id: gate
         run: |
-         DEV="${{ steps.save_file.outputs.image_tag }}"
-         QA="${{ steps.read_qa.outputs.image_tag }}"
-         if [ "$DEV" = "$QA" ]; then
-          echo "Already up to date"
-         else
-          echo "Promotion required"
-         fi
-    outputs:  
-      dev_tag: ${{ steps.save_file.outputs.image_tag }}   
+          DEV="${{ steps.save_file.outputs.image_tag }}"
+          QA="${{ steps.read_qa.outputs.image_tag }}"
+
+          if [ "$DEV" = "$QA" ]; then
+            echo "Already up to date"
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Promotion required"
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          fi
+
   promote_qa:
-    needs:  promotion
+    needs: promotion
+    if: needs.promotion.outputs.promotion_required == 'true'
     runs-on: ubuntu-latest
+
     steps:
-      - name: see the  version
-        run: echo "Deploying ${{ needs.promotion.outputs.dev_tag }}"    
+      - name: see the version
+        run: echo "Deploying ${{ needs.promotion.outputs.dev_tag }}"
+
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.GITOPS_TOKEN }}  
+          token: ${{ secrets.GITOPS_TOKEN }}
           repository: hatif007/devops-final-exam-gitops
           path: qa
-          ref: main  
+          ref: main
+
       - name: install_yq
         run: |
           YQ_VERSION=v4.52.4
           sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
           yq --version
-      - name: read current QA version
-        run: yq '.pods.tag' qa/environments/qa/values.yaml
-      
-      - name: chance the qa file 
+
+      - name: change the qa file
         env:
           DEV_TAG: ${{ needs.promotion.outputs.dev_tag }}
-        id: tag_new  
-        run:  yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/values.yaml
-      - name: show the tag name
-        run: | 
-          echo "the version is:"
-          yq '.pods.tag' qa/environments/qa/values.yaml
-      - name: Commit and add
+        run: yq -i '.pods.tag = strenv(DEV_TAG)' qa/environments/qa/values.yaml
+
+      - name: Commit and push QA
         env:
           QA_TAG: ${{ needs.promotion.outputs.dev_tag }}
         working-directory: qa
@@ -87,58 +93,96 @@ jobs:
           git config user.email "yoav.barel1@gmail.com"
           git add environments/qa/values.yaml
           git commit -m "Update QA image tag to $QA_TAG"
-          git push origin main       
+          git push origin main
+
+  run_qa:
+    needs: promote_qa
+    if: ${{ github.event.workflow_run.conclusion == 'success' && !failure() && !cancelled() }}
+    uses: ./.github/workflows/qa-tests.yaml
+
   promote_prd:
-    needs:  promote_qa
+    needs: [promotion, run_qa]
+    if: ${{ needs.run_qa.result == 'success' && needs.run_qa.outputs.tested_tag != '' && needs.run_qa.outputs.tested_tag == needs.promotion.outputs.dev_tag }}
     runs-on: ubuntu-latest
+
     outputs:
-      PRD_TAG: ${{ steps.read_qa.outputs.image_tag }} 
+      prd_tag: ${{ needs.run_qa.outputs.tested_tag }}
+
     steps:
       - name: checkout_gitOps
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.GITOPS_TOKEN }}  
+          token: ${{ secrets.GITOPS_TOKEN }}
           repository: hatif007/devops-final-exam-gitops
           path: qa
           ref: main
+
       - name: Install yq
         run: |
-         YQ_VERSION=v4.52.4
-         sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
-         sudo chmod +x /usr/local/bin/yq
-         yq --version   
+          YQ_VERSION=v4.52.4
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
       - name: read_and_save_tag_qa
         id: read_qa
         run: echo "image_tag=$(yq '.pods.tag' qa/environments/qa/values.yaml)" >> "$GITHUB_OUTPUT"
-      - name: what is the tag
-        run: echo "${{ steps.read_qa.outputs.image_tag }}"
-      - name: read current PRD version
-        run: yq '.pods.tag' qa/environments/prd/values.yaml
-      - name: chance the prd file 
+
+      - name: Verify tested QA version
         env:
-          PRD_TAG: ${{ steps.read_qa.outputs.image_tag }}
-        id: tag_new  
-        run:  yq -i '.pods.tag = strenv(PRD_TAG)' qa/environments/prd/values.yaml
-      - name: show the tag name
-        run: | 
-          echo "the version is:"
-          yq '.pods.tag' qa/environments/prd/values.yaml  
-      - name: Commit and add
+          TESTED_TAG: ${{ needs.run_qa.outputs.tested_tag }}
+          CURRENT_QA_TAG: ${{ steps.read_qa.outputs.image_tag }}
+        run: |
+          if [ "$TESTED_TAG" != "$CURRENT_QA_TAG" ]; then
+            echo "QA version changed after testing"
+            echo "Tested tag: $TESTED_TAG"
+            echo "Current QA tag: $CURRENT_QA_TAG"
+            exit 1
+          fi
+
+          echo "Tested QA version verified: $TESTED_TAG"
+
+      - name: read_and_save_tag_prd
+        id: read_prd
+        run: echo "image_tag=$(yq '.pods.tag' qa/environments/prd/values.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: gate_prd
+        id: gate_prd
         env:
-          PRD_TAG: ${{ steps.read_qa.outputs.image_tag }}
-          
+          QA: ${{ needs.run_qa.outputs.tested_tag }}
+          PRD: ${{ steps.read_prd.outputs.image_tag }}
+        run: |
+          if [ "$QA" = "$PRD" ]; then
+            echo "PRD already up to date"
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "PRD promotion required"
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: change the prd file
+        if: steps.gate_prd.outputs.required == 'true'
+        env:
+          PRD_TAG: ${{ needs.run_qa.outputs.tested_tag }}
+        run: yq -i '.pods.tag = strenv(PRD_TAG)' qa/environments/prd/values.yaml
+
+      - name: Commit and push PRD
+        if: steps.gate_prd.outputs.required == 'true'
+        env:
+          PRD_TAG: ${{ needs.run_qa.outputs.tested_tag }}
         working-directory: qa
         run: |
           git config user.name "hatif007"
           git config user.email "yoav.barel1@gmail.com"
           git add environments/prd/values.yaml
           git commit -m "Update PRD image tag to $PRD_TAG"
-          git push origin main     
+          git push origin main
 
-  slackNotification:
-    needs: [promotion, promote_qa, promote_prd]
+  slack:
+    needs: [promotion, promote_qa, run_qa, promote_prd]
     if: ${{ always() }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Send Slack notification
         uses: rtCamp/action-slack-notify@v2
@@ -150,7 +194,7 @@ jobs:
           SLACK_COLOR: ${{ needs.promote_prd.result == 'success' && 'good' || 'danger' }}
           SLACK_MESSAGE: |
             Promotion: ${{ needs.promotion.result }}
-            QA: ${{ needs.promote_qa.result }}
-            PRD: ${{ needs.promote_prd.result }}
+            QA Promote: ${{ needs.promote_qa.result }}
+            QA Tests: ${{ needs.run_qa.result }}
+            PRD Promote: ${{ needs.promote_prd.result }}
             Docker Image Tag: ${{ needs.promote_prd.outputs.prd_tag }}
-          
