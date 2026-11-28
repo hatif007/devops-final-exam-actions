@@ -182,8 +182,21 @@ jobs:
     needs: [promotion, promote_qa, run_qa, promote_prd]
     if: ${{ always() }}
     runs-on: ubuntu-latest
-
     steps:
+      - name: Download QA report
+        uses: actions/download-artifact@v8
+        with:
+          name: qa-test-report
+          path: reports
+
+      - name: Read QA report
+        id: qa_report
+        run: |
+          echo "report<<EOF" >> "$GITHUB_OUTPUT"
+          cat reports/qa-report.json >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Send Slack notification
         uses: rtCamp/action-slack-notify@v2
         env:
@@ -198,3 +211,5 @@ jobs:
             QA Tests: ${{ needs.run_qa.result }}
             PRD Promote: ${{ needs.promote_prd.result }}
             Docker Image Tag: ${{ needs.promote_prd.outputs.prd_tag }}
+            QA Report:
+            ${{ steps.qa_report.outputs.report }}
